@@ -1,0 +1,14 @@
+Date        Start       Stop        Activity                Comments
+07/07/20    9:00        12:00       coding subset0
+07/07/20    14:00       16:30       debugging subset0       passed all testcases in autotest0
+08/07/20    9:00        12:00       coding subset1
+08/07/20    14:00       17:30       coding subset1
+08/07/20    20:00       22:00       debugging subset1       find weird error for test1_19, struggled
+10/07/20    14:00       14:30       fix test1_19 issue      many thanks to Andrew's reply in forum :)
+12/07/20    19:00       2:00(+1)    coding subset2
+13/07/20    9:00        12:00       coding subset2
+13/07/20    14:00       17:00       coding subset2
+13/07/20    19:00       3:00(+1)    debugging subset2       passed 9/12 of test2_*
+14/07/20    9:00        12:00       debugging subset2       passed 11/12 of test2_*
+14/07/20    19:00       1:00(+1)    debugging subset2       give up test2_31, extremely difficult
+15/07/20    1:00        3:00        write test cases        not as well as expected, but anyway, finished!

@@ -1,0 +1,196 @@
+#!/bin/dash
+
+# get commit message
+if [ $1 = "-a" ]
+then
+    shrug-add `ls | egrep -v "^shrug-"`
+    msg="$3"
+else
+    msg="$2"
+fi
+
+id=0
+br=`cat .shrug/b_info.txt`
+while true
+do
+    # create help variables to match branch directory
+    addr=""
+    nadd=""
+    cii=""
+    tp=0
+    if [ "$br" = "master" ]
+    then
+        addr="master/$(($id-1))"
+        nadd="master/$id"
+        cii="$id"
+        tp=1
+    else
+        bid=`ls .shrug/"$br" | wc -l`
+        if [ "$bid" -eq 0 ]
+        then
+            nadd="$br"/0
+            cii=0
+        else
+            addr="$br"/$(($bid-1))
+            nadd="$br"/"$bid"
+            cii="$bid"
+        fi
+        tp=2
+    fi
+
+    if ! [ -d .shrug/"master/$id" ] || [ "$tp" -eq 2 ]
+    then
+        # handle empty index (no files inside)
+        if [ `ls .shrug/index | wc -l` -eq 0 ]
+        then
+            if [ `ls .shrug/"$addr" | wc -l` -ne 0 ]
+            then
+                mkdir .shrug/"$nadd"
+
+                if [ -f ".shrug/log.txt" ]
+                then
+                    cmtid=`cat .shrug/log.txt | wc -l`
+                else
+                    cmtid=0
+                fi
+
+                echo "Committed as commit $cmtid"
+
+                # record commit info in log.txt
+                if [ -f ".shrug/log.txt" ]
+                then
+                    sed -i "1s/^/$cmtid $msg\n/" .shrug/log.txt
+                else
+                    echo "$cmtid" "$msg">.shrug/log.txt
+                fi
+
+                # record commit info in log.txt of current branch
+                if [ -f ".shrug/"$br"log.txt" ]
+                then
+                    sed -i "1s/^/$cmtid $msg\n/" .shrug/"$br"log.txt
+                else
+                    echo "$cmtid" "$msg">.shrug/"$br"log.txt
+                fi
+                
+
+                if [ "$1" != "-a" ]
+                then
+                    exit 0
+                fi
+                
+                # add to its dad's log file (if exists)
+                m="$br"
+                ifs=`cat .shrug/relation.txt | egrep ^"$m" | sed -e "s/$m\s//" | sed -e 's/\s[0-9]//'`
+                if [ "$ifs" != "" ]
+                then
+                    for dad in "$ifs"
+                    do
+                        if [ -f ".shrug/"$dad"log.txt" ]
+                        then
+                            sed -i "1s/^/$cmtid $msg\n/" .shrug/"$dad"log.txt
+                        else
+                            echo "$cmtid" "$msg">.shrug/"$dad"log.txt
+                        fi
+                    done
+                fi
+
+                exit 0
+            else
+                echo "nothing to commit"
+                exit 0
+            fi
+        fi
+
+        # check duplication with the latest repository
+        if [ "$cii" -ne 0 ]
+        then
+            changes=0
+
+            # check if existing file changed
+	        if [ `ls .shrug/"$addr" | wc -l` -ne 0 ]            
+            then
+                for can in `ls .shrug/"$addr"`
+                do
+                    if [ -f .shrug/index/$can ]
+                    then
+                        dif=`diff .shrug/"$addr"/$can .shrug/index/$can`
+                        if [ "$dif" != "" ]
+                        then
+                            changes=1
+                        fi
+                    else
+                        changes=1
+                    fi
+                done
+            fi
+
+            # check if new file added
+            if [ `ls .shrug/index/ | wc -l` -gt `ls .shrug/"$addr" | wc -l` ]
+            then
+                changes=1
+            fi
+
+            # duplication judgement
+            if [ "$changes" -eq 0 ]
+            then
+                echo "nothing to commit"
+                exit 0
+            fi
+        fi
+
+        # commit to new repo
+        mkdir .shrug/"$nadd"
+        for file in `ls .shrug/index`
+        do
+            cp .shrug/index/"$file" .shrug/"$nadd"/"$file"
+        done
+
+        if [ -f ".shrug/log.txt" ]
+        then
+            cmtid=`cat .shrug/log.txt | wc -l`
+        else
+            cmtid=0
+        fi
+        echo "Committed as commit $cmtid"
+
+        # record commit info in log.txt
+        if [ -f ".shrug/log.txt" ]
+        then
+            sed -i "1s/^/$cmtid $msg\n/" .shrug/log.txt
+        else
+            echo "$cmtid" "$msg">.shrug/log.txt
+        fi
+
+        # record commit info in log.txt of current branch
+        if [ -f ".shrug/"$br"log.txt" ]
+        then
+            sed -i "1s/^/$cmtid $msg\n/" .shrug/"$br"log.txt
+        else
+            echo "$cmtid" "$msg">.shrug/"$br"log.txt
+        fi
+
+        if [ "$1" != "-a" ]
+        then
+            exit 0
+        fi
+
+        # add to its dad's log file (if exists)
+        m="$br"
+        ifs=`cat .shrug/relation.txt | egrep ^"$m" | sed -e "s/$m\s//" | sed -e 's/\s[0-9]//'`
+        if [ "$ifs" != "" ]
+        then
+            for dad in "$ifs"
+            do
+                if [ -f ".shrug/"$dad"log.txt" ]
+                then
+                    sed -i "1s/^/$cmtid $msg\n/" .shrug/"$dad"log.txt
+                else
+                    echo "$cmtid" "$msg">.shrug/"$dad"log.txt
+                fi
+            done
+        fi
+
+        exit 0
+    fi
+    id=$(($id+1))
+done

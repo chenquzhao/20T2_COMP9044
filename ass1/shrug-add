@@ -1,0 +1,24 @@
+#!/bin/dash
+
+if ! [ -d ".shrug" ]
+then
+    echo "shrug-add: error: no .shrug directory containing shrug repository exists"
+    exit 0
+fi
+
+for file in "$@"
+do
+    if ! [ -f "$file" ]
+    then
+        if [ -f .shrug/index/"$file" ]
+        then
+            # remove file in index if it disappears in working file
+            rm .shrug/index/"$file"
+        else
+            echo "shrug-add: error: can not open 'non_existent_file'"
+        fi
+    else
+        # add file to index
+        cp "$file" .shrug/index/"$file"
+    fi
+done

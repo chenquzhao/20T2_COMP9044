@@ -1,0 +1,5 @@
+#!/bin/dash
+
+# get the log for current brunch
+br=`cat .shrug/b_info.txt`
+cat .shrug/"$br"log.txt

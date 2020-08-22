@@ -1,0 +1,99 @@
+#!/bin/dash
+
+force=0
+cached=0
+
+dl=""
+
+for seg in "$@"
+do
+    # record rm --[mode]
+    if [ "$seg" = "--force" ]
+    then
+        force=1
+        continue
+    elif [ "$seg" = "--cached" ]
+    then
+        cached=1
+        continue
+    fi
+
+    # check data loss
+    if [ "$force" -eq 0 ]
+    then
+        add=0
+        commit=0
+
+        # check data loss between working file and index
+        if [ -f "$seg" ] && [ -f .shrug/index/"$seg" ]
+        then
+            indif=`diff "$seg" .shrug/index/"$seg"`
+            if [ "$indif" = "" ]
+            then
+                add=1
+            fi
+        elif ! [ -f .shrug/index/"$seg" ]
+        then
+            echo "shrug-rm: error: '$seg' is not in the shrug repository"
+            exit 0
+        fi
+
+        # check data loss between index and latest repo
+        lastid=`ls .shrug/master | egrep ^[0-9]+$ | sort | tail -1`
+        if [ "$lastid" != "" ]
+        then
+            if [ -f .shrug/index/"$seg" ] && [ -f .shrug/master/$lastid/"$seg" ]
+            then
+                redif=`diff .shrug/index/"$seg" .shrug/master/$lastid/"$seg"`
+                if [ "$redif" = "" ]
+                then
+                    commit=1
+                fi
+            fi
+        fi
+
+        # throw corresponding error message
+        if [ $add -eq 0 ] && [ $commit -eq 0 ]
+        then
+            echo "shrug-rm: error: '$seg' in index is different to both working file and repository"
+            exit 0
+        elif [ $add -eq 0 ] && [ $commit -eq 1 ] && [ $cached -eq 0 ]
+        then
+            echo "shrug-rm: error: '$seg' in repository is different to working file"
+            exit 0
+        elif [ $add -eq 1 ] && [ $commit -eq 0 ] && [ $cached -eq 0 ]
+        then
+            echo "shrug-rm: error: '$seg' has changes staged in the index"
+            exit 0
+        fi
+    fi
+
+    # rm file in index
+    if [ -f .shrug/index/"$seg" ]
+    then
+        # rm .shrug/index/"$seg"
+        dl=$dl" "".shrug/index/$seg"
+    else
+        echo "shrug-rm: error: '$seg' is not in the shrug repository"
+        exit 0
+    fi
+
+    # rm file in working file
+    if [ "$cached" -eq 0 ]
+    then
+        if [ -f "$seg" ]
+        then
+            # rm "$seg"
+            dl=$dl" ""$seg"
+        else
+            echo "shrug-rm: error: '$seg' is not in the working file"
+            exit 0
+        fi
+    fi
+done
+
+# do remove operations
+for x in "$dl"
+do
+    rm $x
+done

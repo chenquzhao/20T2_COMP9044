@@ -1,0 +1,86 @@
+#!/bin/dash
+bran=`cat .shrug/b_info.txt`
+id=`ls .shrug/"$bran" | egrep ^[0-9]+$ | sort | tail -1`
+br=`ls .shrug | egrep -v .txt$ | egrep -v index`
+
+# display branches if no argvs
+if [ "$#" -eq 0 ]
+then
+    if [ "$id" != "" ]
+    then
+        for dir in $br
+        do
+            echo $dir
+        done
+    else
+        echo "shrug-branch: error: your repository does not have any commits yet"
+    fi
+    exit 0
+fi
+
+# delete branch
+if [ "$#" -eq 2 ] && [ "$1" = "-d" ]
+then
+    if [ "$2" = "master" ]
+    then
+        echo "shrug-branch: error: can not delete branch 'master'"
+    elif [ -d .shrug/"$2" ]
+    then
+
+        bct=`ls .shrug/"$2" | wc -l`
+        bf=0
+        if [ "$bct" -ne 0 ]
+        then
+            bf=`ls .shrug/"$2"/$(($bct-1)) | wc -l`
+        fi
+        if [ "$bf" -ne 0 ]
+        then
+            for f in `ls .shrug/"$2"/$(($bct-1))`
+            do
+                # detect unmerged changes
+                if [ -f "$f" ]
+                then
+                    bmd=`diff .shrug/"$2"/$(($bct-1))/"$f" "$f"`
+                    if [ "$bmd" != "" ]
+                    then
+                        echo "shrug-branch: error: branch '$2' has unmerged changes"
+                        exit 0   
+                    fi
+                else
+                    echo "shrug-branch: error: branch '$2' has unmerged changes"
+                    exit 0
+                fi     
+            done
+        fi
+        rm -rf .shrug/"$2"
+        echo "Deleted branch '$2'"      
+    else
+        echo "shrug-branch: error: branch '$2' does not exist"
+    fi
+    exit 0
+fi
+
+# create new branch
+if [ -d .shrug/"$1" ]
+then
+    echo "shrug-branch: error: branch '$1' already exists"
+else
+    # [child] [dad] [commit no. of dad] >> a relation record file
+    echo "$1 $bran $id" >>.shrug/relation.txt
+
+    mkdir .shrug/"$1"
+    mkdir .shrug/"$1"/0
+
+    # get a copy of dad's log file
+    cp .shrug/"$bran"log.txt .shrug/"$1"log.txt
+
+    fct=`ls .shrug/"$bran"/$id | wc -l`
+    if [ "$fct" -ne 0 ]
+    then
+        for file in `ls .shrug/"$bran"/$id`
+        do
+            # copy dad's file
+            cp .shrug/"$bran"/"$id"/"$file" .shrug/"$1"/"0"/"$file"
+        done
+    fi
+fi

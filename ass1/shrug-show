@@ -1,0 +1,26 @@
+#!/bin/dash
+
+id=`echo $1 | sed -e 's/:.*$//'`
+file=`echo $1 | sed -e 's/^.*://'`
+br=`cat .shrug/b_info.txt`
+
+if [ "$id" = '' ]
+then
+    # retrive from index
+    if ! [ -f .shrug/index/"$file" ]
+    then
+        echo "shrug-show: error: '$file' not found in index"
+    else
+        cat .shrug/index/"$file"
+    fi
+else
+    if ! [ -d .shrug/"$br"/"$id" ]
+    then
+        echo "shrug-show: error: unknown commit '$id'"
+    elif ! [ -f .shrug/"$br"/"$id"/"$file" ]
+    then
+        echo "shrug-show: error: '$file' not found in commit $id"
+    else
+        cat .shrug/"$br"/"$id"/"$file"
+    fi
+fi

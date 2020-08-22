@@ -1,0 +1,15 @@
+#!/bin/dash
+
+if [ -d ".shrug" ]
+then
+    echo "shrug-init: error: .shrug already exists"
+else
+    # initilise .shrug directory and add files & sub-directories needed
+    mkdir ".shrug"
+    mkdir .shrug/index
+    mkdir .shrug/master
+    echo master >.shrug/b_info.txt
+    touch .shrug/relation.txt
+    
+    echo "Initialized empty shrug repository in .shrug"
+fi

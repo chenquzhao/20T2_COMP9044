@@ -1,0 +1,262 @@
+#!/bin/dash
+
+if ! [ -d .shrug/"$1" ]
+then
+    echo "shrug-merge: error: unknown branch '$1'"
+    exit 0
+fi
+
+br="$1"
+msg="$3"
+
+if [ "$msg" = "" ]
+then
+    echo shrug-merge: error: empty commit message
+    exit 0
+fi
+
+cb=`cat .shrug/b_info.txt`
+cbid=`ls .shrug/"$cb" | wc -l`
+cbid=$(($cbid-1))
+
+id=`ls .shrug/"$br" | wc -l`
+id=$(($id-1))
+
+cam=0
+nm=""
+
+if [ -f .shrug/uq.txt ]
+then
+    rm .shrug/uq.txt
+fi
+touch .shrug/uq.txt
+
+# try merges for files in the branch
+for file in `ls .shrug/"$br"/"$id"`
+do
+    if ! [ -f "$file" ]
+    then
+        cp .shrug/"$br"/"$id"/"$file" "$file"
+        echo "$file" >>.shrug/uq.txt
+        continue
+    fi
+
+    i=$cbid
+    eacb=-1
+    while [ "$i" -ne -1 ]
+    do
+        if [ -f .shrug/"$cb"/"$i"/"$file" ]
+        then
+            eacb="$i"
+        fi
+        i=$(($i-1))
+    done
+
+
+    dd=`cat .shrug/relation.txt | egrep ^"$br" | sed -e "s/$br\s//" | sed -e 's/\s[0-9]//'`
+    if [ "$dd" != "" ]
+    then
+        ddc=`cat .shrug/relation.txt | egrep ^"$br" | sed -e "s/$br\s//" | sed -e "s/$dd\s//"`
+        cb="$dd"
+        eacb="$ddc"
+    fi
+
+    lines=0
+    line1=`cat "$file" | wc -l`
+    line2=`cat .shrug/"$br"/"$id"/"$file" | wc -l`
+    line3=`cat .shrug/"$cb"/"$eacb"/"$file" | wc -l`
+    lines="$line1"
+
+    if [ "$line2" -gt "$lines" ]
+    then
+        lines="$line2"
+    fi
+
+    if [ "$line3" -gt "$lines" ]
+    then
+        lines="$line3"
+    fi
+
+    line=1
+    touch tmpo.txt
+
+    # compare changes of this file between expecting branch, working file and working file's history commit
+    # decide which lines to keep
+    # core operation of merge
+    if [ "$lines" -ne "$line1" ] && [ "$lines" -eq "$line2" ]
+    then
+        while [ "$line" -le "$lines" ]
+        do
+            can=`sed -n ${line}p .shrug/"$br"/"$id"/"$file"`
+            lig=`cat .shrug/"$cb"/"$eacb"/"$file" | egrep ^"$can"$`
+            lil=`cat "$file" | egrep ^"$can"$`
+            if [ "$lig" != "" ] && [ "$lil" = "" ]
+            then
+                line=$(($line+1))
+                continue
+            fi
+            echo "$can" >>tmpo.txt
+            line=$(($line+1))
+        done
+    elif [ "$lines" -ne "$line1" ] && [ "$lines" -eq "$line3" ]
+    then
+        while [ "$line" -le "$lines" ]
+        do
+            can=`sed -n ${line}p .shrug/"$cb"/"$eacb"/"$file"`
+            lil=`cat "$file" | egrep ^"$can"$`
+            lib=`cat .shrug/"$br"/"$id"/"$file" | egrep ^"$can"$`
+            if [ "$lil" = "" ] && [ "$lib" = "" ]
+            then
+                line=$(($line+1))
+                continue
+            fi
+            echo "$can" >>tmpo.txt
+            line=$(($line+1))
+        done
+    else
+        while [ "$line" -le "$lines" ]
+        do
+            locl=`sed -n ${line}p $file`
+            brcl=`sed -n ${line}p .shrug/"$br"/"$id"/"$file"`
+
+            guil=`sed -n ${line}p .shrug/"$cb"/"$eacb"/"$file"`
+
+            if [ "$guil" = "" ] && [ "$brcl" != "" ]
+            then
+                race=`echo "$brcl\n$locl" | sort | head -1`
+                if [ "$race" = "$brcl" ]
+                then
+                    echo "$brcl" >>tmpo.txt
+                    echo "$locl" >>tmpo.txt
+                else
+                    echo "$locl" >>tmpo.txt
+                    echo "$brcl" >>tmpo.txt
+                fi
+                line=$(($line+1))
+                continue
+            elif [ "$guil" = "" ] && [ "$brcl" = "" ]
+            then
+                echo "$locl" >>tmpo.txt
+                line=$(($line+1))
+                continue
+            fi
+
+            lib=`cat .shrug/"$br"/"$id"/"$file" | egrep ^"$locl"$`
+            lig=`cat .shrug/"$cb"/"$eacb"/"$file" | egrep ^"$locl"$`
+            
+
+            if [ "$locl" != "$brcl" ]
+            then
+            
+                if [ "$locl" != "$guil" ]
+                then
+                    if [ "$lib" = "" ] && [ "$lig" != "" ]
+                then
+                    line=$(($line+1))
+                    continue
+                fi
+                
+                    echo "$locl" >>tmpo.txt
+                else
+                    echo "$brcl" >>tmpo.txt
+                fi
+            else
+            echo "$locl" >>tmpo.txt
+        fi
+        line=$(($line+1))
+        done
+    fi
+
+    dst=`diff tmpo.txt "$file"`
+    # dstb="s"
+    # if [ -f .shrug/index/"$file" ]
+    # then
+    #     dstb=`diff tmpo.txt .shrug/index/"$file"`
+    # fi
+    dstb=`diff "$file" .shrug/"$br"/"$id"/"$file"`
+    if [ "$dst" = "" ] && [ "$dstb" != "" ]
+    then
+        # echo shrug-merge: error: These files can not be merged:
+        # echo "$file"
+        # rm tmpo.txt
+        # if [ -f .shrug/"$br"log.txt ]
+        # then
+        #     bal=`sed -n 1p .shrug/"$br"log.txt`
+        #     dd=`cat .shrug/b_info.txt | egrep ^"$m" | sed -e "s/$m\s//"`
+        #     if [ "$dd" != "" ]
+        #     then
+        #         sed -i "/$bal/d" .shrug/"$dd"log.txt
+        #     fi
+        # fi
+        # exit 0
+        nm="$file"
+    else
+        cam=1
+    fi
+
+    cp tmpo.txt "$file"
+    rm tmpo.txt
+done
+
+# display merge errors
+if [ "$cam" -eq 0 ]
+then
+    echo shrug-merge: error: These files can not be merged:
+    echo "$file"
+    if [ -f .shrug/"$br"log.txt ]
+    then
+        bal=`sed -n 1p .shrug/"$br"log.txt`
+        dd=`cat .shrug/b_info.txt | egrep ^"$m" | sed -e "s/$m\s//"`
+        if [ "$dd" != "" ]
+        then
+            sed -i "/$bal/d" .shrug/"$dd"log.txt
+        fi
+    fi
+    exit 0
+fi
+
+inf=`ls .shrug/index | wc -l`
+ich=0
+if [ "$inf" -ne 0 ]
+then
+    for f in `ls .shrug/index`
+    do
+        if [ -f "$f" ]
+        then
+            ibd=`diff .shrug/index/"$f" "$f"`
+            if [ "$ibd" != "" ]
+            then
+                ich=1
+            fi
+        else
+            ich=1
+        fi
+    done
+fi
+
+if [ "$ich" -eq 0 ]
+then
+    echo "Fast-forward: no commit created"
+    exit 0
+fi
+
+# display success message
+if [ "$2" = "-m" ]
+then
+    for file in `ls .shrug/"$br"/"$id"`
+    do
+        # gdf=`diff "$file" .shrug/index/"$file"`
+
+        # if [ "$gdf" != "" ]
+        # then
+        iuq=`cat .shrug/uq.txt | egrep ^"$file"$`
+        if [ "$iuq" != "" ]
+        then
+            continue
+        fi
+        cp "$file" .shrug/index/"$file"
+        echo "Auto-merging $file"
+        # fi
+    done
+    shrug-commit -m "$3"
+fi

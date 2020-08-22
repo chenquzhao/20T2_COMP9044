@@ -1,0 +1,132 @@
+#!/bin/dash
+
+# reset previous status
+if [ -f .shrug/status.txt ]
+then
+    rm .shrug/status.txt
+fi
+touch ".shrug/status.txt"
+
+br=`cat .shrug/b_info.txt`
+lastid=`ls .shrug/"$br" | egrep ^[0-9]+$ | sort | tail -1`
+
+addr="master/$lastid"
+
+# start with all files in working file
+for file in `ls`
+do
+    if [ `file "$file" | egrep "directory$" | wc -l` -ne 0 ]
+    then
+        continue
+    fi
+
+    inch=1 # 1 - changes between working file and index, 0 - no changes...
+    inety=0 # 1 - empty index, 0 - non-empty index
+    comch=1 # 1 - changes between index and repo, 0 - no changes...
+
+    # detect changes between working file and index
+    if [ -f .shrug/index/"$file" ]
+    then
+        indif=`diff $file .shrug/index/"$file"`
+        if [ "$indif" = "" ]
+        then
+            inch=0
+        fi
+    else
+        inety=1
+    fi
+
+    # detect changes between working file and repo
+    if [ -f .shrug/"$addr"/$file ]
+    then
+        wcdif=`diff "$file" .shrug/"$addr"/$file`
+        if [ "$wcdif" = "" ]
+        then
+            echo "$file - same as repo">>.shrug/status.txt
+            continue
+        fi
+    fi
+
+    # detect changes between index and repo
+    if [ "$lastid" != "" ] && [ -f .shrug/index/"$file" ]
+    then
+        
+        if [ -f .shrug/"$addr"/$file ]
+        then
+            comdif=`diff .shrug/index/"$file" .shrug/$addr/$file`
+            if [ "$comdif" = "" ]
+            then
+                comch=0
+            fi
+        else
+            if [ $inety -eq 0 ]
+            then
+                if [ $inch -eq 1 ]
+                then
+                    echo "$file - added to index, file changed">>.shrug/status.txt
+                    continue
+                else
+                    echo "$file - added to index">>.shrug/status.txt
+                    continue
+                fi
+            else
+                echo "$file - untracked">>.shrug/status.txt
+                continue
+            fi
+        fi
+    else
+        echo "$file - untracked">>.shrug/status.txt
+        continue
+    fi
+
+    if [ $inch -eq 0 ]
+    then
+        if [ $comch -eq 0 ]
+        then
+            echo "$file - same as repo">>.shrug/status.txt
+        else
+            echo "$file - file changed, changes staged for commit">>.shrug/status.txt
+        fi
+    else
+        if [ $comch -eq 0 ]
+        then
+            echo "$file - file changed, changes not staged for commit">>.shrug/status.txt
+        else
+            echo "$file - file changed, different changes staged for commit">>.shrug/status.txt
+        fi
+    fi
+done
+
+# check all files in repo
+if [ "$lastid" != "" ]
+then
+    for can in `ls .shrug/"$addr"`
+    do
+        if ! [ -f $can ]
+        then
+            if [ -f .shrug/index/$can ]
+            then
+                echo "$can - file deleted">>.shrug/status.txt
+                continue
+            else
+                echo "$can - deleted">>.shrug/status.txt
+                continue
+            fi
+        fi
+    done
+fi
+
+# check all files in index
+for inf in `ls .shrug/index/`
+do
+    if ! [ -f $inf ]
+    then
+        if ! [ -f .shrug/"$addr"/$inf ]
+        then
+            echo "$inf - added to index, file deleted">>.shrug/status.txt
+            continue
+        fi
+    fi
+done
+
+sort .shrug/status.txt
