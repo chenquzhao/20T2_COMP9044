@@ -1,0 +1,17 @@
+Date        Start       Stop        Activity                Comments
+01/08/20    10:00       12:00       Coding Subset0          Passed all examples for Subset0
+01/08/20    13:00       15:00       Coding Subset1          Passed all examples for Subset1
+01/08/20    15:00       17:30       Coding Subset2          Passed all examples for Subset2
+01/08/20    19:00       21:00       Coding Subset3          Passed all examples for Subset3
+02/08/20    09:00       12:00       Debug Subset0,1         Write some tests following the Subsets Table
+02/08/20    14:00       18:00       Debug Subset2,3         Write some tests following the Subsets Table
+04/08/20    09:00       12:00       Coding Subset4          Passed all examples except primes.sh series.sh
+04/08/20    19:00       21:00       Debugging Subset4       Passed all examples except series.sh
+05/08/20    14:00       17:00       Debugging Subset4       Passed all examples
+06/08/20    09:00       12:00       Reformatting code       Split code into several functions for readability
+06/08/20    18:00       21:00       Debugging Subset4       Write some tests following the Subsets Table
+08/08/20    13:00       17:00       Debugging Subset4       Focus on '&&', '||', ';'
+08/08/20    19:00       22:00       Debugging Subset4       Focus on 'case', 'esac'
+08/08/20    22:30       23:30       Integration Test        Run all tests together to ensure functionality
+09/08/20    10:00       12:00       Collect Test            Generate test0*.sh and demo0*.sh from my test files
+09/08/20    12:01       12:01       Completed               Generally all parts work as well as expected so far
